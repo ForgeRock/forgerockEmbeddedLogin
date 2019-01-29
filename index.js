@@ -1,14 +1,14 @@
 (function () {
     "use strict";
 
+    let findName = (array, name) => array.reduce(
+        (found, item) => found || (item.name === name && item), false
+    );
+
     let embeddedLogin = function (authenticateUrl) {
         this.authenticateUrl = authenticateUrl;
         return this;
     };
-
-    let findName = (array, name) => array.reduce(
-        (found, item) => found || (item.name === name && item), false
-    );
 
     embeddedLogin.prototype.startLogin = function () {
         return fetch(this.authenticateUrl, {
@@ -47,7 +47,7 @@
                 },
                 output: [{
                     name: "options",
-                    value: [ "Login" ]
+                    value: [ this.getLoginButtonText() ]
                 }],
                 type: "ConfirmationCallback"
             };
@@ -56,6 +56,10 @@
             (needsLoginButton ? this.currentCallbacks.callbacks.concat(loginCallback) : this.currentCallbacks.callbacks)
             .map((callback, index) => this.renderCallback(callback, index))
         ).then(this.joinRenderedCallbacks);
+    };
+
+    embeddedLogin.prototype.getLoginButtonText = function () {
+        return "Login";
     };
 
     embeddedLogin.prototype.handleLoginSubmit = function (event) {
