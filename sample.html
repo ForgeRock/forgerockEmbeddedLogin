@@ -1,0 +1,40 @@
+<html>
+    <head>
+        <script src="ForgeRockEmbeddedLoginBundle.js"></script>
+        <style>
+            #loginPanel {
+                position: absolute;
+                display: block;
+                width: 300px;
+                height: 500px;
+                border: thin black solid;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="loginPanel"></div>
+    </body>
+    <script>
+    var login = new ForgeRockEmbeddedLogin({
+        authenticateUrl: "https://sample.iam.forgeops.com/am/json/realms/root/authenticate",
+        loginElement: document.getElementById("loginPanel"),
+        successHandler: function() {
+            this.loginElement.innerHTML = "Logged In!";
+        },
+        failureHandler: function() {
+            this.loginElement.innerHTML = "Login Failure!";
+        }
+    });
+
+    /* Example for how to customize various callbacks:
+    login.renderNameCallback = function (callback, index, prompt) {
+        return Promise.resolve(`<label>${prompt} : <input type="text" name="callback_${index}" value="${callback.input[0].value}"></label>`);
+    };
+
+    login.renderPasswordCallback = function (callback, index, prompt) {
+        return Promise.resolve(`<label>${prompt} : <input type="password" name="callback_${index}" value="${callback.input[0].value}"></label>`);
+    };
+    */
+    login.startLogin();
+    </script>
+</html>

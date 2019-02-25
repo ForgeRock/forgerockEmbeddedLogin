@@ -1,17 +1,20 @@
 {
   "name": "forgerockembeddedlogin",
   "version": "0.0.1",
-  "description": "Library to assist with embedded login for ForgeRock web clients",
+  "description": "Library to assist with login for ForgeRock web clients",
   "main": "index.js",
   "scripts": {
     "pretest": "eslint --ignore-path .gitignore .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "browserify --s ForgeRockEmbeddedLogin -o ForgeRockEmbeddedLoginBundle.js index.js"
   },
   "keywords": [
     "ForgeRock"
   ],
   "author": "Jake Feasel",
   "license": "MIT",
+  "dependencies": {
+    "browserify": "^16.2.3"
+  },
   "devDependencies": {
     "eslint": "^5.9.0",
     "eslint-config-standard": "^12.0.0",
