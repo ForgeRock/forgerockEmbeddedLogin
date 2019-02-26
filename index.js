@@ -50,20 +50,8 @@
      * supplied (besides the cookie that may be present in the case of an established session).
      */
     embeddedLogin.prototype.startLogin = function () {
-        return fetch(this.authenticateUrl, {
-            mode: "cors",
-            method: "POST",
-            credentials: "include",
-            headers: {
-                "accept-api-version": "protocol=1.0,resource=2.1"
-            }
-        })
-        .then((resp) => resp.json())
-        .then((jsonResp) => {
-            this.currentCallbacks = jsonResp;
-            return this.currentCallbacks;
-        })
-        .then(() => this.handleCallbackResponse());
+        this.currentCallbacks = {};
+        return this.submitCallbacks();
     };
 
     /** @function success
