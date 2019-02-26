@@ -81,6 +81,14 @@
             this.currentCallbacks.code === 401;
     };
 
+    /** @function renderHandler
+     * Binds the content produced from renderAllCallbacks to the DOM. The default implementation
+     * merely sets the innerHTML and attaches an onsubmit handler to the form within the content.
+     *
+     * You may want to override this if you want more control over how the fields are inserted into
+     * the DOM. Be sure to set the onsubmit handler for the form to call out to `handleLoginSubmit`
+     * if you do override it.
+     */
     embeddedLogin.prototype.renderHandler = function (loginContent) {
         if (this.loginElement) {
             this.loginElement.innerHTML = loginContent;
@@ -90,6 +98,14 @@
         return this;
     };
 
+    /** @function renderAllCallbacks
+     * Loops over every callback returned by the authentication API, calling the renderCallback
+     * function for each of them. The default function adds a ConfirmationCallback if there isn't
+     * normally one present in the response.
+     *
+     * You may want to override this function if you want to change the behavior for that added
+     * ConfirmationCallback.
+     */
     embeddedLogin.prototype.renderAllCallbacks = function () {
         var needsLoginButton = !this.currentCallbacks.callbacks.reduce((result, callback) =>
                 result || ["ConfirmationCallback","PollingWaitCallback","RedirectCallback"].indexOf(callback.type) !== -1,
@@ -113,10 +129,26 @@
         ).then(this.joinRenderedCallbacks);
     };
 
+    /** @function getLoginButtonText
+     * Provides a default English-language option for the login button produced by the
+     * `renderAllCallbacks` function. You may want to override this function if you want
+     * to have support for internationalization.
+     */
     embeddedLogin.prototype.getLoginButtonText = function () {
         return "Login";
     };
 
+    /** @function handleLoginSubmit
+     * The default function supplied as the "onsubmit" handler for the input form. Assumes
+     * the input fields are named like so:
+     * callback_0
+     * callback_1
+     * etc...
+     *
+     * Maps the value from those inputs into the `currentCallbacks` structure last fetched.
+     *
+     * You will need to override this if the naming convention for your inputs are different.
+     */
     embeddedLogin.prototype.handleLoginSubmit = function (event) {
         event.preventDefault();
         for (var entry of (new FormData(event.currentTarget))) {
@@ -128,6 +160,11 @@
         return this.submitCallbacks();
     };
 
+    /** @function submitCallbacks
+     * This function is similar to `startLogin`, except it supplies the gathered
+     * inputs captured in the `currentCallbacks` data. It makes XHR calls to the
+     * authenticateUrl and uses `handleCallbackResponse` afterwards.
+     */
     embeddedLogin.prototype.submitCallbacks = function () {
         return fetch(this.authenticateUrl, {
             mode: "cors",
@@ -147,6 +184,11 @@
         .then(() => this.handleCallbackResponse());
     };
 
+    /** @function renderCallback
+     * Delegates the current callback to the appropriate type-specific rendering function.
+     * It's not expected that this should need to be overriden; the various callback-specific
+     * logic included within this function should be generally-applicable.
+     */
     embeddedLogin.prototype.renderCallback = function (callback, index) {
         let prompt = "",
             promptOutput = findName(callback.output, "prompt");
@@ -160,13 +202,18 @@
             case "TextInputCallback": return this.renderTextInputCallback(callback, index, prompt); break;
             case "TextOutputCallback":
                 let type = findName(callback.output, "messageType"),
-                    message = findName(callback.output, "message");
+                    message = findName(callback.output, "message"),
+                    messageTypeMap = {
+                        0: "INFORMATION",
+                        1: "WARNING",
+                        2: "ERROR"
+                    };
 
                 // Magic number 4 is for a <script>, taken from ScriptTextOutputCallback.java
                 if (type.value === "4") {
                     return this.renderTextOutputScript(index, message.value);
                 } else {
-                    return this.renderTextOutputMessage(index, message.value, type.value);
+                    return this.renderTextOutputMessage(index, message.value, messageTypeMap[type.value]);
                 }
             break;
             case "ConfirmationCallback":
@@ -230,40 +277,112 @@
                 }, pollingWaitTimeoutMs);
                 return this.renderPollingWaitCallback(callback, index, findName(callback.output, "message").value);
             break;
-            default: return this.renderUnknownCallback(callback, index); break;
+            default: return this.renderUnknownCallback(callback, index, prompt); break;
         }
     };
 
+    /** @function joinRenderedCallbacks
+     * @param {Array} renderedCallbacks - Array of resolved values which have been produced by the `renderCallback` method
+     * @returns {Promise} - resolved when the full content of the form to render is available
+     *
+     * It is expected that this function will be overridden. The default implementation is very simple, and merely adds
+     * <form> tags around the callbacks, along with breaks between them. If you want more sophisticated markup around your
+     * input controls, you can provide it here.
+     */
     embeddedLogin.prototype.joinRenderedCallbacks = function (renderedCallbacks) {
         return Promise.resolve(
             `<form>${renderedCallbacks.join("<br>\n")}</form>`
         );
     };
 
+    /** @function renderNameCallback
+     * @param {Object} callback - structure of data returned from authentication API for this specific callback type
+     * @param {number} index - ordinal position of this callback relative to others
+     * @param {string} prompt - Text to present to the user describing the callback
+     * @returns {Promise} - resolved when the full content of this callback is available
+     *
+     * It is expected that this function will be overridden. The default implementation is a very simple text input field.
+     */
     embeddedLogin.prototype.renderNameCallback = function (callback, index, prompt) {
         return Promise.resolve(`<input type="text" name="callback_${index}" value="${callback.input[0].value}" placeholder="${prompt}">`);
     };
 
+    /** @function renderPasswordCallback
+     * @param {Object} callback - structure of data returned from authentication API for this specific callback type
+     * @param {number} index - ordinal position of this callback relative to others
+     * @param {string} prompt - Text to present to the user describing the callback
+     * @returns {Promise} - resolved when the full content of this callback is available
+     *
+     * It is expected that this function will be overridden. The default implementation is a very simple password input field.
+     */
     embeddedLogin.prototype.renderPasswordCallback = function (callback, index, prompt) {
         return Promise.resolve(`<input type="password" name="callback_${index}" value="${callback.input[0].value}" placeholder="${prompt}">`);
     };
 
+    /** @function renderTextInputCallback
+     * @param {Object} callback - structure of data returned from authentication API for this specific callback type
+     * @param {number} index - ordinal position of this callback relative to others
+     * @param {string} prompt - Text to present to the user describing the callback
+     * @returns {Promise} - resolved when the full content of this callback is available
+     *
+     * It is expected that this function will be overridden. The default implementation is a very simple textarea input field.
+     */
     embeddedLogin.prototype.renderTextInputCallback = function (callback, index, prompt) {
         return Promise.resolve(`<textarea name="callback_${index}">${callback.input[0].value}</textarea>`);
     };
 
+    /** @function renderTextOutputScript
+     * @param {number} index - ordinal position of this callback relative to others
+     * @param {string} messageValue - Script to be executed
+     * @returns {Promise} - resolved when the full content of this callback is available
+     *
+     * This is the special-case of a "TextOutputCallback" that is of type "4" - indicating a script.
+     * This adds client-side JavaScript code to execute in the browser. You shouldn't have
+     * to override this under normal circumstances.
+     */
     embeddedLogin.prototype.renderTextOutputScript = function (index, messageValue) {
         return Promise.resolve(`<script type="text/javascript">${messageValue}</script>`);
     };
 
+    /** @function renderTextOutputMessage
+     * @param {number} index - ordinal position of this callback relative to others
+     * @param {string} messageValue - Script to be executed
+     * @param {string} typeValue - type of output message [INFORMATION,WARNING,ERROR]
+     * @returns {Promise} - resolved when the full content of this callback is available
+     *
+     * This is the general-case of a "TextOutputCallback".
+     * This outputs a non-interactive text message, of a particular type.
+     */
     embeddedLogin.prototype.renderTextOutputMessage = function (index, messageValue, typeValue) {
         return Promise.resolve(`<div id="callback_${index}" class="${typeValue}">${messageValue}</div>`);
     };
 
+    /** @function renderConfirmationCallbackOption
+     * @param {string} option - value of this particular option
+     * @param {number} index - ordinal position of this callback relative to others
+     * @param {number} key - ordinal position of this option relative to others
+     * @param {boolean} isDefault - true if this option is the "default" one; should only be one within this callback set to true
+     * @returns {Promise} - resolved when the full content of this callback is available
+     *
+     * This renders one particular confirmation callback option. It is one value within a set,
+     * the totality of which represents a single confirmation callback.
+     */
     embeddedLogin.prototype.renderConfirmationCallbackOption = function (option, index, key, isDefault) {
         return Promise.resolve(`<input name="callback_${index}" type="submit" index="${key}" value="${option}">`);
     };
 
+    /** @function renderChoiceCallback
+     * @param {Object} callback - structure of data returned from authentication API for this specific callback type
+     * @param {number} index - ordinal position of this callback relative to others
+     * @param {string} prompt - Text to present to the user describing the callback
+     * @param {Array} choices - List of choicesffor this callback
+     * @param {string} choices[].key - the value to be submitted for this callback if it is selected
+     * @param {boolean} choices[].active - the default value to be selected
+     * @param {string} choices[].value - the content to display to the user representing this choice
+     * @returns {Promise} - resolved when the full content of this callback is available
+     *
+     * This renders a set of choices, intended for the user to choose between.
+     */
     embeddedLogin.prototype.renderChoiceCallback = function (callback, index, prompt, choices) {
         return Promise.resolve(
             `<label for="callback_${index}" id="label_callback_${index}">${prompt}</label>
@@ -273,16 +392,37 @@
         );
     };
 
+    /** @function renderHiddenValueCallback
+     * @param {Object} callback - structure of data returned from authentication API for this specific callback type
+     * @param {number} index - ordinal position of this callback relative to others
+     *
+     * This includes a hidden value within the form.
+     */
     embeddedLogin.prototype.renderHiddenValueCallback = function (callback, index) {
         return Promise.resolve(`<input type="hidden" id="${callback.input.value}" aria-hidden="true" name="callback_${index}" value="" />`);
     };
 
+    /** @function renderPollingWaitCallback
+     * @param {Object} callback - structure of data returned from authentication API for this specific callback type
+     * @param {number} index - ordinal position of this callback relative to others
+     * @param {string} messageValue - Text to be displayed to the user while the client waits
+     *
+     * This displays text to the user while waiting for something to happen out-of-channel.
+     */
     embeddedLogin.prototype.renderPollingWaitCallback = function (callback, index, message) {
         return Promise.resolve(`<h4>${message}</h4>`);
-    }
+    };
 
-    embeddedLogin.prototype.renderUnknownCallback = function (callback, index) {
-        return this.renderNameCallback(callback, index);
+    /** @function renderUnknownCallback
+     * @param {Object} callback - structure of data returned from authentication API for this specific callback type
+     * @param {number} index - ordinal position of this callback relative to others
+     * @param {string} prompt - Text to present to the user describing the callback
+     * @returns {Promise} - resolved when the full content of this callback is available
+     *
+     * Handler for an unknown callback type. By default it just uses the name callback.
+     */
+    embeddedLogin.prototype.renderUnknownCallback = function (callback, index, prompt) {
+        return this.renderNameCallback(callback, index, prompt);
     };
 
     module.exports = embeddedLogin;
