@@ -5,17 +5,27 @@
   "main": "index.js",
   "scripts": {
     "pretest": "eslint --ignore-path .gitignore .",
-    "build": "browserify --s ForgeRockEmbeddedLogin -o ForgeRockEmbeddedLoginBundle.js index.js"
-  },
+    "build": "browserify --s ForgeRockEmbeddedLogin -o ForgeRockEmbeddedLoginBundle.js index.js",
+    "build-compat": "browserify --s ForgeRockEmbeddedLogin -o ForgeRockEmbeddedLoginBundle-temp.js compat.js && babel --env-name compat ForgeRockEmbeddedLoginBundle-temp.js -o ForgeRockEmbeddedLoginBundleCompat.js && rm ForgeRockEmbeddedLoginBundle-temp.js"
+   },
   "keywords": [
     "ForgeRock"
   ],
   "author": "Jake Feasel",
   "license": "MIT",
   "dependencies": {
-    "browserify": "^16.2.3"
+    "browserify": "^16.2.3",
+    "whatwg-fetch": "^3.0.0"
+  },
+  "browserify": {
+    "transform": ["babelify"]
   },
   "devDependencies": {
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.3.4",
+    "@babel/preset-env": "^7.3.4",
+    "babel-preset-minify": "^0.5.0",
+    "babelify": "^10.0.0",
     "eslint": "^5.9.0",
     "eslint-config-standard": "^12.0.0",
     "eslint-plugin-import": "^2.14.0",
