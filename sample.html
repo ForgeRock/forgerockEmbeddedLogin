@@ -28,11 +28,15 @@
 
     /* Example for how to customize various callbacks:
     login.renderNameCallback = function (callback, index, prompt) {
-        return Promise.resolve(`<label>${prompt} : <input type="text" name="callback_${index}" value="${callback.input[0].value}"></label>`);
+        let el = document.createElement("div");
+        el.innerHTML = `<label>${prompt} : <input type="text" name="callback_${index}" value="${callback.input[0].value}"></label>`;
+        return Promise.resolve(el.firstElementChild);
     };
 
     login.renderPasswordCallback = function (callback, index, prompt) {
-        return Promise.resolve(`<label>${prompt} : <input type="password" name="callback_${index}" value="${callback.input[0].value}"></label>`);
+        let el = document.createElement("div");
+        el.innerHTML = `<label>${prompt} : <input type="password" name="callback_${index}" value="${callback.input[0].value}"></label>`;
+        return Promise.resolve(el.firstElementChild);
     };
     */
     login.startLogin();

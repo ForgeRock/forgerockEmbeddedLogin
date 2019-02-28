@@ -38,7 +38,7 @@
             this.failureHandler();
         } else {
             this.renderAllCallbacks()
-            .then((loginContent) => this.renderHandler(loginContent));
+                .then((loginContent) => this.renderHandler(loginContent));
         }
         return this;
     };
@@ -79,7 +79,12 @@
      */
     embeddedLogin.prototype.renderHandler = function (loginContent) {
         if (this.loginElement) {
-            this.loginElement.innerHTML = loginContent;
+            // clear the content from this.loginElement
+            let cNode = this.loginElement.cloneNode(false);
+            this.loginElement.parentNode.replaceChild(cNode, this.loginElement);
+            this.loginElement = cNode;
+            this.loginElement.appendChild(loginContent);
+
             let form = this.loginElement.getElementsByTagName("form")[0];
             form.onsubmit = this.handleLoginSubmit.bind(this);
         }
@@ -113,8 +118,9 @@
 
         return Promise.all(
             (needsLoginButton ? this.currentCallbacks.callbacks.concat(loginCallback) : this.currentCallbacks.callbacks)
-            .map((callback, index) => this.renderCallback(callback, index))
-        ).then(this.joinRenderedCallbacks);
+                .map((callback, index) => this.renderCallback(callback, index))
+        )
+            .then(this.joinRenderedCallbacks);
     };
 
     /** @function getLoginButtonText
@@ -164,12 +170,12 @@
             },
             body: JSON.stringify(this.currentCallbacks)
         })
-        .then((resp) => resp.json())
-        .then((jsonResp) => {
-            this.currentCallbacks = jsonResp;
-            return this.currentCallbacks;
-        })
-        .then(() => this.handleCallbackResponse());
+            .then((resp) => resp.json())
+            .then((jsonResp) => {
+                this.currentCallbacks = jsonResp;
+                return this.currentCallbacks;
+            })
+            .then(() => this.handleCallbackResponse());
     };
 
     /** @function renderCallback
@@ -185,164 +191,176 @@
         }
 
         switch (callback.type) {
-            case "NameCallback": return this.renderNameCallback(callback, index, prompt); break;
-            case "PasswordCallback": return this.renderPasswordCallback(callback, index, prompt); break;
-            case "TextInputCallback": return this.renderTextInputCallback(callback, index, prompt); break;
-            case "TextOutputCallback":
-                let type = findName(callback.output, "messageType"),
-                    message = findName(callback.output, "message"),
-                    messageTypeMap = {
-                        0: "INFORMATION",
-                        1: "WARNING",
-                        2: "ERROR"
-                    };
+        case "NameCallback": return this.renderNameCallback(callback, index, prompt);
+        case "PasswordCallback": return this.renderPasswordCallback(callback, index, prompt);
+        case "TextInputCallback": return this.renderTextInputCallback(callback, index, prompt);
+        case "TextOutputCallback":
+            var type = findName(callback.output, "messageType"),
+                message = findName(callback.output, "message"),
+                messageTypeMap = {
+                    0: "INFORMATION",
+                    1: "WARNING",
+                    2: "ERROR"
+                };
 
-                // Magic number 4 is for a <script>, taken from ScriptTextOutputCallback.java
-                if (type.value === "4") {
-                    return this.renderTextOutputScript(index, message.value);
-                } else {
-                    return this.renderTextOutputMessage(index, message.value, messageTypeMap[type.value]);
-                }
-            break;
-            case "ConfirmationCallback":
-                var options = findName(callback.output, "options");
+            // Magic number 4 is for a <script>, taken from ScriptTextOutputCallback.java
+            if (type.value === "4") {
+                return this.renderTextOutputScript(index, message.value);
+            } else {
+                return this.renderTextOutputMessage(index, message.value, messageTypeMap[type.value]);
+            }
+        case "ConfirmationCallback":
+            var options = findName(callback.output, "options");
 
-                if (options && options.value !== undefined) {
-                    // if there is only one option then mark it as default.
-                    let defaultOption = options.value.length > 1
-                        ? findName(callback.output, "defaultOption") : { "value": 0 };
+            if (options && options.value !== undefined) {
+                // if there is only one option then mark it as default.
+                let defaultOption = options.value.length > 1
+                    ? findName(callback.output, "defaultOption") : { "value": 0 };
 
-                    return Promise.all(
-                        options.value.map((option, key) =>
-                            this.renderConfirmationCallbackOption(option, index, key, defaultOption && defaultOption.value === key)
-                        )
-                    );
-                } else {
-                    return Promise.all([]);
-                }
-            break;
-            case "ChoiceCallback":
-                let choiceOutput = findName(callback.output, "choices");
-                if (choiceOutput && choiceOutput.value !== undefined) {
-                    let choices = choiceOutput.value.map((option, key) => ({
-                        active: callback.input.value === key,
-                        key,
-                        value: option
-                    }));
-                    return this.renderChoiceCallback(callback, index, prompt, choices);
-                } else {
-                    return Promise.all([]);
-                }
-            break;
-            case "HiddenValueCallback": return this.renderHiddenValueCallback(callback, index); break;
-            case "RedirectCallback":
-                let redirectUrl = findName(callback.output, "redirectUrl");
-                let redirectMethod = findName(callback.output, "redirectMethod");
-                let redirectData = findName(callback.output, "redirectData");
+                return Promise.all(
+                    options.value.map((option, key) =>
+                        this.renderConfirmationCallbackOption(option, index, key, defaultOption && defaultOption.value === key)
+                    )
+                );
+            } else {
+                return Promise.all([]);
+            }
+        case "ChoiceCallback":
+            var choiceOutput = findName(callback.output, "choices");
+            if (choiceOutput && choiceOutput.value !== undefined) {
+                let choices = choiceOutput.value.map((option, key) => ({
+                    active: callback.input.value === key,
+                    key,
+                    value: option
+                }));
+                return this.renderChoiceCallback(callback, index, prompt, choices);
+            } else {
+                return Promise.all([]);
+            }
+        case "HiddenValueCallback": return this.renderHiddenValueCallback(callback, index);
+        case "RedirectCallback":
+            var redirectUrl = findName(callback.output, "redirectUrl");
+            var redirectMethod = findName(callback.output, "redirectMethod");
+            var redirectData = findName(callback.output, "redirectData");
 
-                let form = document.createElement("form");
-                form.action = redirectUrl.value;
-                form.method = redirectMethod.value;
-                if (redirectData && redirectData.value) {
-                    redirectData.value.forEach((v, k) => {
-                        let input = document.createElement("input");
-                        input.type = 'hidden';
-                        input.name = k;
-                        input.value = v;
-                        form.appendChild(input);
-                    });
-                }
-                document.getElementsByTagName("body")[0].appendChild(form);
-                form.submit();
-                // no return from here, expectation is the page transitions to the redirectUrl
+            var form = document.createElement("form");
+            form.action = redirectUrl.value;
+            form.method = redirectMethod.value;
+            if (redirectData && redirectData.value) {
+                redirectData.value.forEach((v, k) => {
+                    let input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = k;
+                    input.value = v;
+                    form.appendChild(input);
+                });
+            }
+            document.getElementsByTagName("body")[0].appendChild(form);
+            form.submit();
+            // no return from here, expectation is the page transitions to the redirectUrl
             break;
-            case "PollingWaitCallback":
-                let pollingWaitTimeoutMs = findName(callback.output, "waitTime").value;
+        case "PollingWaitCallback":
+            var pollingWaitTimeoutMs = findName(callback.output, "waitTime").value;
 
-                setTimeout(() => {
-                    this.pollingInProgress = true;
-                    // figure out how to handle this later
-                }, pollingWaitTimeoutMs);
-                return this.renderPollingWaitCallback(callback, index, findName(callback.output, "message").value);
-            break;
-            default: return this.renderUnknownCallback(callback, index, prompt); break;
+            setTimeout(() => {
+                this.pollingInProgress = true;
+                // figure out how to handle this later
+            }, pollingWaitTimeoutMs);
+            return this.renderPollingWaitCallback(callback, index, findName(callback.output, "message").value);
+        default: return this.renderUnknownCallback(callback, index, prompt);
         }
     };
 
     /** @function joinRenderedCallbacks
      * @param {Array} renderedCallbacks - Array of resolved values which have been produced by the `renderCallback` method
-     * @returns {Promise} - resolved when the full content of the form to render is available
+     * @returns {Promise} - resolved when the full content of the form to render is available. Promise is resolved with DOM Node represeting the complete login form
      *
      * It is expected that this function will be overridden. The default implementation is very simple, and merely adds
      * <form> tags around the callbacks, along with breaks between them. If you want more sophisticated markup around your
      * input controls, you can provide it here.
      */
     embeddedLogin.prototype.joinRenderedCallbacks = function (renderedCallbacks) {
-        return Promise.resolve(
-            `<form>${renderedCallbacks.join("<br>\n")}</form>`
-        );
+        let form = document.createElement("form");
+        renderedCallbacks
+            // flatten callback results
+            .reduce((result, item) => result.concat(item), [])
+            .forEach((callback) => {
+                form.appendChild(callback);
+                form.appendChild(document.createElement("br"));
+            });
+        return Promise.resolve(form);
     };
 
     /** @function renderNameCallback
      * @param {Object} callback - structure of data returned from authentication API for this specific callback type
      * @param {number} index - ordinal position of this callback relative to others
      * @param {string} prompt - Text to present to the user describing the callback
-     * @returns {Promise} - resolved when the full content of this callback is available
+     * @returns {Promise} - resolved when the full content of this callback is available. Expected to be resolved with a DOM node
      *
      * It is expected that this function will be overridden. The default implementation is a very simple text input field.
      */
     embeddedLogin.prototype.renderNameCallback = function (callback, index, prompt) {
-        return Promise.resolve(`<input type="text" name="callback_${index}" value="${callback.input[0].value}" placeholder="${prompt}">`);
+        let el = document.createElement("div");
+        el.innerHTML = `<input type="text" name="callback_${index}" value="${callback.input[0].value}" placeholder="${prompt}">`;
+        return Promise.resolve(el.firstElementChild);
     };
 
     /** @function renderPasswordCallback
      * @param {Object} callback - structure of data returned from authentication API for this specific callback type
      * @param {number} index - ordinal position of this callback relative to others
      * @param {string} prompt - Text to present to the user describing the callback
-     * @returns {Promise} - resolved when the full content of this callback is available
+     * @returns {Promise} - resolved when the full content of this callback is available. Expected to be resolved with a DOM node
      *
      * It is expected that this function will be overridden. The default implementation is a very simple password input field.
      */
     embeddedLogin.prototype.renderPasswordCallback = function (callback, index, prompt) {
-        return Promise.resolve(`<input type="password" name="callback_${index}" value="${callback.input[0].value}" placeholder="${prompt}">`);
+        let el = document.createElement("div");
+        el.innerHTML = `<input type="password" name="callback_${index}" value="${callback.input[0].value}" placeholder="${prompt}">`;
+        return Promise.resolve(el.firstElementChild);
     };
 
     /** @function renderTextInputCallback
      * @param {Object} callback - structure of data returned from authentication API for this specific callback type
      * @param {number} index - ordinal position of this callback relative to others
      * @param {string} prompt - Text to present to the user describing the callback
-     * @returns {Promise} - resolved when the full content of this callback is available
+     * @returns {Promise} - resolved when the full content of this callback is available. Expected to be resolved with a DOM node
      *
      * It is expected that this function will be overridden. The default implementation is a very simple textarea input field.
      */
     embeddedLogin.prototype.renderTextInputCallback = function (callback, index, prompt) {
-        return Promise.resolve(`<textarea name="callback_${index}">${callback.input[0].value}</textarea>`);
+        let el = document.createElement("div");
+        el.innerHTML = `<textarea name="callback_${index}">${callback.input[0].value}</textarea>`;
+        return Promise.resolve(el.firstElementChild);
     };
 
     /** @function renderTextOutputScript
      * @param {number} index - ordinal position of this callback relative to others
      * @param {string} messageValue - Script to be executed
-     * @returns {Promise} - resolved when the full content of this callback is available
+     * @returns {Promise} - resolved when the full content of this callback is available. Expected to be resolved with a DOM node
      *
      * This is the special-case of a "TextOutputCallback" that is of type "4" - indicating a script.
      * This adds client-side JavaScript code to execute in the browser. You shouldn't have
      * to override this under normal circumstances.
      */
     embeddedLogin.prototype.renderTextOutputScript = function (index, messageValue) {
-        return Promise.resolve(`<script type="text/javascript">${messageValue}</script>`);
+        let el = document.createElement("script");
+        el.innerHTML = messageValue;
+        return Promise.resolve(el);
     };
 
     /** @function renderTextOutputMessage
      * @param {number} index - ordinal position of this callback relative to others
      * @param {string} messageValue - Script to be executed
      * @param {string} typeValue - type of output message [INFORMATION,WARNING,ERROR]
-     * @returns {Promise} - resolved when the full content of this callback is available
+     * @returns {Promise} - resolved when the full content of this callback is available. Expected to be resolved with a DOM node
      *
      * This is the general-case of a "TextOutputCallback".
      * This outputs a non-interactive text message, of a particular type.
      */
     embeddedLogin.prototype.renderTextOutputMessage = function (index, messageValue, typeValue) {
-        return Promise.resolve(`<div id="callback_${index}" class="${typeValue}">${messageValue}</div>`);
+        let el = document.createElement("div");
+        el.innerHTML = `<div id="callback_${index}" class="${typeValue}">${messageValue}</div>`;
+        return Promise.resolve(el.firstElementChild);
     };
 
     /** @function renderConfirmationCallbackOption
@@ -350,13 +368,15 @@
      * @param {number} index - ordinal position of this callback relative to others
      * @param {number} key - ordinal position of this option relative to others
      * @param {boolean} isDefault - true if this option is the "default" one; should only be one within this callback set to true
-     * @returns {Promise} - resolved when the full content of this callback is available
+     * @returns {Promise} - resolved when the full content of this callback is available. Expected to be resolved with a DOM node
      *
      * This renders one particular confirmation callback option. It is one value within a set,
      * the totality of which represents a single confirmation callback.
      */
     embeddedLogin.prototype.renderConfirmationCallbackOption = function (option, index, key, isDefault) {
-        return Promise.resolve(`<input name="callback_${index}" type="submit" index="${key}" value="${option}">`);
+        let el = document.createElement("div");
+        el.innerHTML = `<input name="callback_${index}" type="submit" index="${key}" value="${option}">`;
+        return Promise.resolve(el.firstElementChild);
     };
 
     /** @function renderChoiceCallback
@@ -367,45 +387,51 @@
      * @param {string} choices[].key - the value to be submitted for this callback if it is selected
      * @param {boolean} choices[].active - the default value to be selected
      * @param {string} choices[].value - the content to display to the user representing this choice
-     * @returns {Promise} - resolved when the full content of this callback is available
+     * @returns {Promise} - resolved when the full content of this callback is available. Expected to be resolved with a DOM node
      *
      * This renders a set of choices, intended for the user to choose between.
      */
     embeddedLogin.prototype.renderChoiceCallback = function (callback, index, prompt, choices) {
-        return Promise.resolve(
-            `<label for="callback_${index}" id="label_callback_${index}">${prompt}</label>
+        let el = document.createElement("div");
+        el.innerHTML = `<label for="callback_${index}" id="label_callback_${index}">${prompt}</label>
             <select name="callback_${index}" id="callback_${index}">
             ${choices.map((choice) => `<option value="${choice.key}" ${choice.active ? "selected" : ""}>${choice.value}</option>`)}
-            </select>`
-        );
+            </select>`;
+        return Promise.resolve(el.firstElementChild);
     };
 
     /** @function renderHiddenValueCallback
      * @param {Object} callback - structure of data returned from authentication API for this specific callback type
      * @param {number} index - ordinal position of this callback relative to others
+     * @returns {Promise} - resolved when the full content of this callback is available. Expected to be resolved with a DOM node
      *
      * This includes a hidden value within the form.
      */
     embeddedLogin.prototype.renderHiddenValueCallback = function (callback, index) {
-        return Promise.resolve(`<input type="hidden" id="${callback.input.value}" aria-hidden="true" name="callback_${index}" value="" />`);
+        let el = document.createElement("div");
+        el.innerHTML = `<input type="hidden" id="${callback.input.value}" aria-hidden="true" name="callback_${index}" value="" />`;
+        return Promise.resolve(el.firstElementChild);
     };
 
     /** @function renderPollingWaitCallback
      * @param {Object} callback - structure of data returned from authentication API for this specific callback type
      * @param {number} index - ordinal position of this callback relative to others
      * @param {string} messageValue - Text to be displayed to the user while the client waits
+     * @returns {Promise} - resolved when the full content of this callback is available. Expected to be resolved with a DOM node
      *
      * This displays text to the user while waiting for something to happen out-of-channel.
      */
     embeddedLogin.prototype.renderPollingWaitCallback = function (callback, index, message) {
-        return Promise.resolve(`<h4>${message}</h4>`);
+        let el = document.createElement("div");
+        el.innerHTML = `<input type="hidden" id="${callback.input.value}" aria-hidden="true" name="callback_${index}" value="" />`;
+        return Promise.resolve(el.firstElementChild);
     };
 
     /** @function renderUnknownCallback
      * @param {Object} callback - structure of data returned from authentication API for this specific callback type
      * @param {number} index - ordinal position of this callback relative to others
      * @param {string} prompt - Text to present to the user describing the callback
-     * @returns {Promise} - resolved when the full content of this callback is available
+     * @returns {Promise} - resolved when the full content of this callback is available. Expected to be resolved with a DOM node
      *
      * Handler for an unknown callback type. By default it just uses the name callback.
      */
