@@ -13,12 +13,14 @@
      * @constructor
      * @param {Object} options
      * @param {String} options.authenticateUrl - The URL to the AM authentication API, with all options included within the query string
+     * @param {function} options.postRenderHandler - Function to call after the login form is rendered on the page. Includes  (header, stage, template) arguments
      * @param {function} options.successHandler - Function to call whenever authentication succeeds
      * @param {function} options.failureHandler - Function to call whenever authentication fails
      * @param {Object} options.loginElement - Place in the DOM used to render the credential input fields
      */
     let embeddedLogin = function (options) {
         this.authenticateUrl = options.authenticateUrl;
+        this.postRenderHandler = options.postRenderHandler;
         this.successHandler = options.successHandler;
         this.failureHandler = options.failureHandler;
         this.loginElement = options.loginElement;
@@ -38,7 +40,16 @@
             this.failureHandler();
         } else {
             this.renderAllCallbacks()
-                .then((loginContent) => this.renderHandler(loginContent));
+                .then((loginContent) => this.renderHandler(loginContent))
+                .then(() => {
+                    if (this.postRenderHandler) {
+                        this.postRenderHandler(
+                            this.currentCallbacks.header,
+                            this.currentCallbacks.stage,
+                            this.currentCallbacks.template
+                        );
+                    }
+                });
         }
         return this;
     };

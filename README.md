@@ -10,18 +10,23 @@ The minimum invocation of this library is demonstrated in [sample.html](./sample
 var login = new ForgeRockEmbeddedLogin({
     authenticateUrl: "https://sample.iam.forgeops.com/am/json/realms/root/authenticate",
     loginElement: document.getElementById("loginPanel"),
+    postRenderHandler: function (header, stage, template) {
+        document.getElementById("loginHeader").innerHTML = header;
+    },
     successHandler: function() {
-        this.loginElement.innerHTML = "Logged In!";
+        document.getElementById("loginHeader").innerHTML = "Logged In!";
+        this.loginElement.innerHTML = '';
     },
     failureHandler: function() {
-        this.loginElement.innerHTML = "Login Failure!";
+        document.getElementById("loginHeader").innerHTML = "Login Failure!";
+        setTimeout(() => this.startLogin(), 2000);
     }
 });
 
 login.startLogin();
 ```
 
-This code will work with the AM instance specified by the "authenticateUrl" parameter to determine the current state of the user. If they are already logged-in to the AM server, then the "successHandler" will be invoked. If the user needs to log in, then the input fields necessary for the first step of the authentication process will be rendered within the "loginElement" provided. If the user supplies invalid credentials (or if for some other reason AM cannot authenticate the user), the "failureHandler" will be invoked.
+This code will work with the AM instance specified by the "authenticateUrl" parameter to determine the current state of the user. If they are already logged-in to the AM server, then the "successHandler" will be invoked. If the user needs to log in, then the input fields necessary for the first step of the authentication process will be rendered within the "loginElement" provided. If the user supplies invalid credentials (or if for some other reason AM cannot authenticate the user), the "failureHandler" will be invoked. Each time the login form is rendered, the "postRenderHandler" method will be called (and provided details: the header, stage and template values from the current authentication response).
 
 It is expected that you will want to customize the way in which the input fields are rendered within your application. You have fine-grained control over this rendering. All you have to do is override the appropriate function with your own implementation. For example, if you want to change the way password fields are rendered, you simply have to override the `renderPasswordCallback` function, like so:
 
