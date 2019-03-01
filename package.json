@@ -4,7 +4,7 @@
   "description": "Library to assist with login for ForgeRock web clients",
   "main": "index.js",
   "scripts": {
-    "pretest": "eslint --ignore-path .gitignore .",
+    "pretest": "eslint .",
     "build": "browserify --s ForgeRockEmbeddedLogin -o ForgeRockEmbeddedLoginBundle.js index.js",
     "build-compat": "browserify --s ForgeRockEmbeddedLogin -o ForgeRockEmbeddedLoginBundle-temp.js compat.js && babel --env-name compat ForgeRockEmbeddedLoginBundle-temp.js -o ForgeRockEmbeddedLoginBundleCompat.js && rm ForgeRockEmbeddedLoginBundle-temp.js"
    },

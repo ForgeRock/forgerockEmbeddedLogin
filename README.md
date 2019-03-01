@@ -27,7 +27,9 @@ It is expected that you will want to customize the way in which the input fields
 
 ```javascript
 login.renderPasswordCallback = function (callback, index, prompt) {
-    return Promise.resolve(`<label>${prompt}<input type="password" name="callback_${index}" value="${callback.input[0].value}"></label>`);
+    let el = document.createElement("div");
+    el.innerHTML = `<label>${prompt} : <input type="password" name="callback_${index}" value="${callback.input[0].value}"></label>`;
+    return Promise.resolve(el.firstElementChild);
 };
 ```
 
