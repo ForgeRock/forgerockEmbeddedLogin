@@ -1,6 +1,6 @@
 {
   "name": "forgerockembeddedlogin",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Library to assist with login for ForgeRock web clients",
   "main": "index.js",
   "scripts": {
@@ -8,6 +8,10 @@
     "build": "browserify --s ForgeRockEmbeddedLogin -o ForgeRockEmbeddedLoginBundle.js index.js",
     "build-compat": "browserify --s ForgeRockEmbeddedLogin -o ForgeRockEmbeddedLoginBundle-temp.js compat.js && babel --env-name compat ForgeRockEmbeddedLoginBundle-temp.js -o ForgeRockEmbeddedLoginBundleCompat.js && rm ForgeRockEmbeddedLoginBundle-temp.js"
    },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ForgeRock/forgerockEmbeddedLogin.git"
+  },
   "keywords": [
     "ForgeRock"
   ],
