@@ -1,6 +1,6 @@
 {
   "name": "forgerockembeddedlogin",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Library to assist with login for ForgeRock web clients",
   "main": "index.js",
   "scripts": {

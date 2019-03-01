@@ -6,23 +6,29 @@
                 position: absolute;
                 display: block;
                 width: 300px;
-                height: 500px;
+                height: 200px;
                 border: thin black solid;
             }
         </style>
     </head>
     <body>
+        <h1 id="loginHeader"></h1>
         <div id="loginPanel"></div>
     </body>
     <script>
     var login = new ForgeRockEmbeddedLogin({
         authenticateUrl: "https://sample.iam.forgeops.com/am/json/realms/root/authenticate",
         loginElement: document.getElementById("loginPanel"),
+        postRenderHandler: function (header, stage, template) {
+            document.getElementById("loginHeader").innerHTML = header;
+        },
         successHandler: function() {
-            this.loginElement.innerHTML = "Logged In!";
+            document.getElementById("loginHeader").innerHTML = "Logged In!";
+            this.loginElement.innerHTML = '';
         },
         failureHandler: function() {
-            this.loginElement.innerHTML = "Login Failure!";
+            document.getElementById("loginHeader").innerHTML = "Login Failure!";
+            setTimeout(() => this.startLogin(), 2000);
         }
     });
 
