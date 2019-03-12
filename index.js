@@ -2,7 +2,7 @@
     "use strict";
 
     /**
-     * Module used to encapsilate interaction with ForgeRock Access Management's authentication API
+     * Module used to encapsulate interaction with ForgeRock Access Management's authentication API
      * @module ForgeRockEmbeddedLogin
      */
     let findName = (array, name) => array.reduce(
@@ -152,7 +152,7 @@
      *
      * Maps the value from those inputs into the `currentCallbacks` structure last fetched.
      *
-     * You will need to override this if the naming convention for your inputs are different.
+     * You will need to override this if the naming convention for your inputs is different.
      */
     embeddedLogin.prototype.handleLoginSubmit = function (event) {
         event.preventDefault();
@@ -168,7 +168,7 @@
     /** @function submitCallbacks
      * This function is similar to `startLogin`, except it supplies the gathered
      * inputs captured in the `currentCallbacks` data. It makes XHR calls to the
-     * authenticateUrl and uses `handleCallbackResponse` afterwards.
+     * `authenticateUrl` and uses `handleCallbackResponse` afterwards.
      */
     embeddedLogin.prototype.submitCallbacks = function () {
         return fetch(this.authenticateUrl, {
@@ -224,7 +224,7 @@
             var options = findName(callback.output, "options");
 
             if (options && options.value !== undefined) {
-                // if there is only one option then mark it as default.
+                // If there is only one option then mark it as default.
                 let defaultOption = options.value.length > 1
                     ? findName(callback.output, "defaultOption") : { "value": 0 };
 
@@ -284,7 +284,7 @@
 
     /** @function joinRenderedCallbacks
      * @param {Array} renderedCallbacks - Array of resolved values which have been produced by the `renderCallback` method
-     * @returns {Promise} - resolved when the full content of the form to render is available. Promise is resolved with DOM Node represeting the complete login form
+     * @returns {Promise} - resolved when the full content of the form to render is available. Promise is resolved with DOM Node representing the complete login form
      *
      * It is expected that this function will be overridden. The default implementation is very simple, and merely adds
      * <form> tags around the callbacks, along with breaks between them. If you want more sophisticated markup around your
@@ -394,7 +394,7 @@
      * @param {Object} callback - structure of data returned from authentication API for this specific callback type
      * @param {number} index - ordinal position of this callback relative to others
      * @param {string} prompt - Text to present to the user describing the callback
-     * @param {Array} choices - List of choicesffor this callback
+     * @param {Array} choices - List of choices for this callback
      * @param {string} choices[].key - the value to be submitted for this callback if it is selected
      * @param {boolean} choices[].active - the default value to be selected
      * @param {string} choices[].value - the content to display to the user representing this choice
