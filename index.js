@@ -278,6 +278,8 @@
                 // figure out how to handle this later
             }, pollingWaitTimeoutMs);
             return this.renderPollingWaitCallback(callback, index, findName(callback.output, "message").value);
+        case "ReCaptchaCallback":
+            return this.renderReCaptchaCallback(callback, index, prompt);
         default: return this.renderUnknownCallback(callback, index, prompt);
         }
     };
@@ -404,10 +406,10 @@
      */
     embeddedLogin.prototype.renderChoiceCallback = function (callback, index, prompt, choices) {
         let el = document.createElement("div");
-        el.innerHTML = `<label for="callback_${index}" id="label_callback_${index}">${prompt}</label>
+        el.innerHTML = `<div><label for="callback_${index}" id="label_callback_${index}">${prompt}</label>
             <select name="callback_${index}" id="callback_${index}">
             ${choices.map((choice) => `<option value="${choice.key}" ${choice.active ? "selected" : ""}>${choice.value}</option>`)}
-            </select>`;
+            </select></div>`;
         return Promise.resolve(el.firstElementChild);
     };
 
@@ -436,6 +438,79 @@
         let el = document.createElement("div");
         el.innerHTML = `<input type="hidden" id="${callback.input.value}" aria-hidden="true" name="callback_${index}" value="" />`;
         return Promise.resolve(el.firstElementChild);
+    };
+
+    /** @function renderReCaptchaCallback
+     * @param {string} option - value of this particular option
+     * @param {number} index - ordinal position of this callback relative to others
+     * @param {number} key - ordinal position of this option relative to others
+     * @returns {Promise} - resolved when the full content of this callback is available
+     *
+     * This renders ReCaptchaCallback
+     */
+    embeddedLogin.prototype.renderReCaptchaCallback = function (option, index, key) {
+        var reCaptchaSiteKey = option.output[0].value,
+            reCaptchaContainer = document.createElement("div"),
+            reCaptchaApiImport = document.createElement("script"),
+            reCaptchaScript = document.createElement("script"),
+            reCaptchaStyle = document.createElement("style"),
+            reCaptchaHTML = document.createElement("div"),
+            reCaptchaInput = document.createElement("input"),
+            reCaptchaScriptSource = `
+                var loginButton = document.querySelectorAll('input[type=submit]')[0],
+                    callback_index = ${index},
+                    /*
+                        If callback_index is zero and the "name" attribute on loginButton is callback_1 we
+                        know ReCaptcha is by itself on the page. In this case we will hide loginButton
+                        and click it to submit the form automatically when ReCaptcha is complete.
+                    */
+                    standaloneMode = callback_index === 0 && loginButton && loginButton.name === "callback_1";
+
+                if (standaloneMode) {
+                    loginButton.style.display = "none";
+                }
+
+                function handleCaptchaCallback(response) {
+                   document.getElementById("reCaptchaInput").value = response;
+
+                   if (standaloneMode) {
+                       loginButton.click();
+                   }
+                }
+            `,
+            reCaptchaStyleSource = `
+                .g-recaptcha>div {
+                    margin: auto;
+                }
+                .g-recaptcha>div>div {
+                   display: inline-block;
+                }
+            `;
+
+        // add the api link
+        reCaptchaApiImport.src = "https://www.google.com/recaptcha/api.js";
+        reCaptchaContainer.appendChild(reCaptchaApiImport);
+        // add the script
+        reCaptchaScript.innerHTML = reCaptchaScriptSource;
+        reCaptchaContainer.appendChild(reCaptchaScript);
+        // add the style
+        reCaptchaStyle.innerHTML = reCaptchaStyleSource;
+        reCaptchaContainer.appendChild(reCaptchaStyle);
+        // define and add the g-recaptcha div
+        reCaptchaHTML.className = "g-recaptcha";
+        reCaptchaHTML.setAttribute("data-sitekey", reCaptchaSiteKey);
+        reCaptchaHTML.setAttribute("data-callback", "handleCaptchaCallback");
+        reCaptchaHTML.style = "margin-bottom: 5px;";
+        reCaptchaContainer.appendChild(reCaptchaHTML);
+        // define the reCaptchaInput
+        reCaptchaInput.type = "hidden";
+        reCaptchaInput.id = "reCaptchaInput";
+        reCaptchaInput.name = `callback_${index}`;
+        reCaptchaContainer.appendChild(reCaptchaInput);
+
+        reCaptchaContainer.style = "display: inline;";
+
+        return Promise.resolve(reCaptchaContainer);
     };
 
     /** @function renderUnknownCallback
