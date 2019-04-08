@@ -406,10 +406,10 @@
      */
     embeddedLogin.prototype.renderChoiceCallback = function (callback, index, prompt, choices) {
         let el = document.createElement("div");
-        el.innerHTML = `<label for="callback_${index}" id="label_callback_${index}">${prompt}</label>
+        el.innerHTML = `<div><label for="callback_${index}" id="label_callback_${index}">${prompt}</label>
             <select name="callback_${index}" id="callback_${index}">
             ${choices.map((choice) => `<option value="${choice.key}" ${choice.active ? "selected" : ""}>${choice.value}</option>`)}
-            </select>`;
+            </select></div>`;
         return Promise.resolve(el.firstElementChild);
     };
 
